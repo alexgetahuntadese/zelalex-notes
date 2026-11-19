@@ -1,0 +1,3 @@
+CREATE POLICY "team reads screenshots" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'screenshots');
+CREATE POLICY "team uploads screenshots" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'screenshots' AND (storage.foldername(name))[1] = auth.uid()::text);
+CREATE POLICY "owner deletes screenshots" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'screenshots' AND owner = auth.uid());

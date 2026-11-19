@@ -10,33 +10,62 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DocsIdRouteImport } from './routes/docs.$id'
+import { Route as DocsNewRouteImport } from './routes/docs.new'
+import { Route as DocsIdEditRouteImport } from './routes/docs.$id.edit'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DocsIdRoute = DocsIdRouteImport.update({
+  id: '/docs/$id',
+  path: '/docs/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DocsNewRoute = DocsNewRouteImport.update({
+  id: '/docs/new',
+  path: '/docs/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DocsIdEditRoute = DocsIdEditRouteImport.update({
+  id: '/edit',
+  path: '/edit',
+  getParentRoute: () => DocsIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/docs/$id': typeof DocsIdRouteWithChildren
+  '/docs/new': typeof DocsNewRoute
+  '/docs/$id/edit': typeof DocsIdEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/docs/$id': typeof DocsIdRouteWithChildren
+  '/docs/new': typeof DocsNewRoute
+  '/docs/$id/edit': typeof DocsIdEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/docs/$id': typeof DocsIdRouteWithChildren
+  '/docs/new': typeof DocsNewRoute
+  '/docs/$id/edit': typeof DocsIdEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/docs/$id' | '/docs/new' | '/docs/$id/edit'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/docs/$id' | '/docs/new' | '/docs/$id/edit'
+  id: '__root__' | '/' | '/docs/$id' | '/docs/new' | '/docs/$id/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DocsIdRoute: typeof DocsIdRouteWithChildren
+  DocsNewRoute: typeof DocsNewRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +77,45 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/docs/$id': {
+      id: '/docs/$id'
+      path: '/docs/$id'
+      fullPath: '/docs/$id'
+      preLoaderRoute: typeof DocsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/docs/new': {
+      id: '/docs/new'
+      path: '/docs/new'
+      fullPath: '/docs/new'
+      preLoaderRoute: typeof DocsNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/docs/$id/edit': {
+      id: '/docs/$id/edit'
+      path: '/edit'
+      fullPath: '/docs/$id/edit'
+      preLoaderRoute: typeof DocsIdEditRouteImport
+      parentRoute: typeof DocsIdRoute
+    }
   }
 }
 
+interface DocsIdRouteChildren {
+  DocsIdEditRoute: typeof DocsIdEditRoute
+}
+
+const DocsIdRouteChildren: DocsIdRouteChildren = {
+  DocsIdEditRoute: DocsIdEditRoute,
+}
+
+const DocsIdRouteWithChildren =
+  DocsIdRoute._addFileChildren(DocsIdRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DocsIdRoute: DocsIdRouteWithChildren,
+  DocsNewRoute: DocsNewRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

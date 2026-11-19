@@ -28,3 +28,5 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+- Team docs app: data in `docs` table (snippets jsonb, images = paths in private `screenshots` bucket under `<userId>/`); all signed-in users read/edit, only author deletes. Why: shared team knowledge base.
