@@ -1,9 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { LovableMark } from "@lovable.dev/cloud-auth-js/react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 import { useAuth } from "@/lib/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,9 +26,12 @@ function SignIn() {
     if (res.error) { toast.error(res.error.message); return; }
     if (mode === "up" && !res.data.session) toast.success("Check your email to confirm your account.");
   }
-  async function oauth(p: "google" | "lovable") {
-    const r = await lovable.auth.signInWithOAuth(p, { redirect_uri: window.location.origin });
-    if (r.error) toast.error(String(r.error.message ?? r.error));
+  async function oauth() {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin },
+    });
+    if (error) toast.error(error.message);
   }
   return (
     <div className="grid min-h-screen place-items-center px-4">
@@ -44,8 +45,7 @@ function SignIn() {
           <Button className="w-full" disabled={busy}>{mode === "in" ? "Sign in" : "Sign up"}</Button>
         </form>
         <div className="mt-4 grid gap-2">
-          <Button variant="outline" onClick={() => oauth("google")}><G /> Continue with Google</Button>
-          <Button variant="outline" onClick={() => oauth("lovable")}><LovableMark /> Continue with Lovable</Button>
+          <Button variant="outline" onClick={oauth}><G /> Continue with Google</Button>
         </div>
         <button className="mt-6 text-sm text-muted-foreground underline" onClick={() => setMode(mode === "in" ? "up" : "in")}>
           {mode === "in" ? "No account? Sign up" : "Have an account? Sign in"}
