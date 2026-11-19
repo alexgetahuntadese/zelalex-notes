@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { AuthGate } from "@/components/AuthGate";
 import { CodeCompare } from "@/components/CodeCompare";
-import { getDoc, signedUrls } from "@/lib/docs";
+import { getDoc, isVideoPath, signedUrls } from "@/lib/docs";
 import { useAuth } from "@/lib/use-auth";
 import { Button } from "@/components/ui/button";
 
@@ -55,9 +55,11 @@ function View() {
       </header>
       {d.body && <div className="whitespace-pre-wrap rounded-md border bg-card p-5 leading-relaxed">{d.body}</div>}
       {d.images.length > 0 && (
-        <section className="space-y-3"><h2 className="font-medium">Screenshots</h2>
+        <section className="space-y-3"><h2 className="font-medium">Attachments</h2>
           <div className="grid gap-3 sm:grid-cols-2">{d.images.map((p) => urls[p] && (
-            <a key={p} href={urls[p]} target="_blank" rel="noreferrer"><img src={urls[p]} alt="" className="w-full rounded-md border" /></a>))}</div>
+            isVideoPath(p)
+              ? <video key={p} src={urls[p]} controls preload="metadata" className="w-full rounded-md border bg-black" />
+              : <a key={p} href={urls[p]} target="_blank" rel="noreferrer"><img src={urls[p]} alt="" className="w-full rounded-md border" /></a>))}</div>
         </section>)}
       {d.snippets.length > 0 && (
         <section className="space-y-6"><h2 className="font-medium">Code changes</h2>{d.snippets.map((s, i) => <CodeCompare key={i} s={s} />)}</section>)}

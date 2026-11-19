@@ -26,9 +26,16 @@ export async function signedUrls(paths: string[]): Promise<Record<string, string
   return out;
 }
 export async function uploadScreenshot(userId: string, file: File) {
-  const ext = file.name.split(".").pop() || "png";
+  return uploadAttachment(userId, file);
+}
+export async function uploadAttachment(userId: string, file: File) {
+  const ext = file.name.split(".").pop()?.replace(/[^a-zA-Z0-9]/g, "") || "bin";
   const path = `${userId}/${crypto.randomUUID()}.${ext}`;
   const { error } = await supabase.storage.from("screenshots").upload(path, file, { contentType: file.type });
   if (error) throw error;
   return path;
+}
+
+export function isVideoPath(path: string) {
+  return /\.(mp4|m4v|mov|webm|ogv|ogg|mkv|avi|3gp)$/i.test(path);
 }

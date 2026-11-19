@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { ImagePlus, Plus, Trash2, X } from "lucide-react";
+import { ImagePlus, Plus, Trash2, Video, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { CATEGORIES, signedUrls, uploadScreenshot, type Doc, type Snippet } from "@/lib/docs";
+import { CATEGORIES, isVideoPath, signedUrls, uploadAttachment, uploadScreenshot, type Doc, type Snippet } from "@/lib/docs";
 import { useAuth } from "@/lib/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,49 @@ export function DocEditor({ doc }: { doc?: Doc }) {
   const [images, setImages] = useState<string[]>(doc?.images ?? []);
   const [urls, setUrls] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [draftReady, setDraftReady] = useState(false);
+  const [draftSaved, setDraftSaved] = useState(false);
+  const draftKey = user ? `zelalex-notes:draft:${user.id}:${doc?.id ?? "new"}` : null;
+
+  useEffect(() => {
+    if (!draftKey) return;
+    setDraftReady(false);
+    try {
+      const cached = localStorage.getItem(draftKey);
+      if (cached) {
+        const draft = JSON.parse(cached) as Partial<{
+          title: string; category: string; system: string; summary: string; body: string;
+          snippets: Snippet[]; images: string[];
+        }>;
+        if (typeof draft.title === "string") setTitle(draft.title);
+        if (typeof draft.category === "string") setCategory(draft.category);
+        if (typeof draft.system === "string") setSystem(draft.system);
+        if (typeof draft.summary === "string") setSummary(draft.summary);
+        if (typeof draft.body === "string") setBody(draft.body);
+        if (Array.isArray(draft.snippets)) setSnippets(draft.snippets);
+        if (Array.isArray(draft.images)) setImages(draft.images);
+        setDraftSaved(true);
+      }
+    } catch {
+      try { localStorage.removeItem(draftKey); } catch { /* Browser storage is unavailable. */ }
+    }
+    setDraftReady(true);
+  }, [draftKey]);
+
+  useEffect(() => {
+    if (!draftKey || !draftReady) return;
+    setDraftSaved(false);
+    const timer = window.setTimeout(() => {
+      try {
+        localStorage.setItem(draftKey, JSON.stringify({ title, category, system, summary, body, snippets, images }));
+        setDraftSaved(true);
+      } catch {
+        // Keep editing if browser storage is unavailable or full.
+      }
+    }, 500);
+    return () => window.clearTimeout(timer);
+  }, [draftKey, draftReady, title, category, system, summary, body, snippets, images]);
 
   useEffect(() => { signedUrls(images.filter((p) => !urls[p])).then((u) => setUrls((o) => ({ ...o, ...u }))); }, [images]);
 
@@ -34,6 +77,23 @@ export function DocEditor({ doc }: { doc?: Doc }) {
         setImages((i) => [...i, p]);
       }
     } catch (e) { toast.error((e as Error).message); }
+  }
+  async function onVideoFiles(files: FileList | null) {
+    if (!files || !user) return;
+    const videos = Array.from(files);
+    if (videos.some((file) => !file.type.startsWith("video/"))) {
+      toast.error("Choose video files only");
+      return;
+    }
+    setUploading(true);
+    try {
+      for (const file of videos) {
+        const path = await uploadAttachment(user.id, file);
+        setImages((items) => [...items, path]);
+      }
+      toast.success(videos.length === 1 ? "Video uploaded" : "Videos uploaded");
+    } catch (e) { toast.error((e as Error).message); }
+    finally { setUploading(false); }
   }
   useEffect(() => {
     const h = (e: ClipboardEvent) => { if (e.clipboardData?.files.length) onFiles(e.clipboardData.files); };
@@ -51,13 +111,20 @@ export function DocEditor({ doc }: { doc?: Doc }) {
       : await supabase.from("docs").insert({ ...row, author_email: user?.email ?? null, snippets: snippets as never }).select("id").single();
     setBusy(false);
     if (res.error) { toast.error(res.error.message); return; }
+    if (draftKey) {
+      try { localStorage.removeItem(draftKey); } catch { /* Saving the entry still succeeded. */ }
+    }
+    setDraftReady(false);
     toast.success("Saved");
     nav({ to: "/docs/$id", params: { id: res.data.id } });
   }
 
   return (
     <div className="mx-auto max-w-4xl space-y-8">
-      <h1 className="text-2xl font-semibold tracking-tight">{doc ? "Edit entry" : "New entry"}</h1>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-2xl font-semibold tracking-tight">{doc ? "Edit entry" : "New entry"}</h1>
+        {draftSaved && <span className="text-xs text-muted-foreground">Draft saved on this device</span>}
+      </div>
       <section className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5 sm:col-span-2"><Label>Title</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Custom invoice report layout" /></div>
         <div className="space-y-1.5"><Label>Category</Label>
@@ -69,15 +136,22 @@ export function DocEditor({ doc }: { doc?: Doc }) {
       </section>
 
       <section className="space-y-3">
-        <div className="flex items-center justify-between"><h2 className="font-medium">Screenshots</h2>
+        <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="font-medium">Attachments</h2>
+          <div className="flex gap-2">
           <Label className="cursor-pointer"><span className="inline-flex items-center gap-2 rounded-md border bg-card px-3 py-1.5 text-sm"><ImagePlus className="size-4" /> Upload</span>
-            <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => onFiles(e.target.files)} /></Label></div>
-        <p className="text-xs text-muted-foreground">Tip: you can also paste a screenshot (Ctrl+V) anywhere on this page.</p>
+            <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => onFiles(e.target.files)} /></Label>
+            <Label className="cursor-pointer"><span className="inline-flex items-center gap-2 rounded-md border bg-card px-3 py-1.5 text-sm"><Video className="size-4" /> Upload video</span>
+              <input type="file" accept="video/*" multiple className="hidden" onChange={(e) => { onVideoFiles(e.target.files); e.currentTarget.value = ""; }} /></Label>
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">Add screenshots or video clips. You can also paste a screenshot (Ctrl+V) anywhere on this page.</p>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {images.map((p) => (
             <div key={p} className="relative overflow-hidden rounded-md border bg-muted">
-              {urls[p] && <img src={urls[p]} alt="" className="aspect-video w-full object-cover" />}
-              <button aria-label="Remove screenshot" className="absolute right-1 top-1 rounded bg-card p-1" onClick={() => setImages((i) => i.filter((x) => x !== p))}><X className="size-3" /></button>
+              {urls[p] && (isVideoPath(p)
+                ? <video src={urls[p]} controls preload="metadata" className="aspect-video w-full bg-black object-contain" />
+                : <img src={urls[p]} alt="" className="aspect-video w-full object-cover" />)}
+              <button aria-label="Remove attachment" className="absolute right-1 top-1 rounded bg-card p-1" onClick={() => setImages((i) => i.filter((x) => x !== p))}><X className="size-3" /></button>
             </div>
           ))}
         </div>
@@ -103,7 +177,7 @@ export function DocEditor({ doc }: { doc?: Doc }) {
 
       <div className="flex justify-end gap-2 border-t pt-6">
         <Button variant="ghost" onClick={() => history.back()}>Cancel</Button>
-        <Button onClick={save} disabled={busy}>{busy ? "Saving…" : "Save entry"}</Button>
+        <Button onClick={save} disabled={busy || uploading}>{uploading ? "Uploading…" : busy ? "Saving…" : "Save entry"}</Button>
       </div>
     </div>
   );
