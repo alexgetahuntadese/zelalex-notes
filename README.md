@@ -1,14 +1,18 @@
-# Welcome to your Lovable project
+# Zelalex Notes
+
+Build a site that saves it documentation on all what we do such as customization, and oither fixes on odoo, printer general ict all etc with screenshoot upload and code pasting as origional code and edited
 
 This project was built with [Lovable](https://lovable.dev).
 
+**Live app**: https://zelalex-notes.lovable.app
+
 ## Build with Lovable
 
-Open your project in the [Lovable editor](https://lovable.dev) and keep building.
+Continue developing this project in the [Lovable editor](https://lovable.dev/projects/cf94e1ee-895f-44ba-b9d7-8e5b6d85bb21).
 
 - **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: connect the project to GitHub and every change made in Lovable is committed straight to your repository.
-- **Full ownership**: this code is yours. Push to your repository and your changes sync back into Lovable, ready for your next prompt.
+- **Stay in sync**: every change made in Lovable is committed straight to this repository.
+- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
 
 ## Development
 
@@ -20,10 +24,3 @@ cd <repository-name>
 npm i
 npm run dev
 ```
-
-## Built with
-
-- TanStack Start
-- TypeScript
-- React
-- Tailwind CSS
